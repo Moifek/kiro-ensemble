@@ -28,7 +28,7 @@ Spec-driven multi-agent development workflow with lean context management, incre
 4. Per task:
    ├─ builder implements → returns report
    ├─ validator verifies (reads files fresh)
-   ├─ builder commits (commit-message skill)
+   ├─ builder commits (conventional commit message)
    └─ documenter documents (reads files fresh)
 5. Code review (reviewer analyzes full diff)
    └─ Fix loop if findings: builder → validator → commit
@@ -62,15 +62,30 @@ Spec-driven multi-agent development workflow with lean context management, incre
 │   ├── documenter.json + documenter-prompt.md
 │   └── README.md
 ├── settings/
-│   └── git-convention.json   # workspace, repos, branch/PR format
+│   └── git-convention-example.json   # workspace, repos, branch/PR format
 ├── steering/
-│   ├── backend-patterns.md
-│   ├── typescript-patterns.md
-│   └── data-contract-integrity.md
+│   ├── atlassian-mcp-rules.md
+│   ├── branching-convention.md
+│   ├── ears-reference.md
+│   ├── jira-agent-workflow.md
+│   ├── jira-ticket-template.md
+│   └── response-preferences.md
+├── skills/
+│   ├── address-pr-review/
+│   ├── code-review/
+│   ├── record-session/
+│   ├── refine-ticket/
+│   └── sync-specs/
+├── templates/
+│   ├── documentation-template.md
+│   └── incident-report.md
+├── scripts/
+│   └── log-session.sh
 ├── hooks/
 │   ├── agentic-team.kiro.hook
 │   ├── log-session.kiro.hook
-│   └── *.sh
+│   ├── check-careful.sh
+│   └── init-session-db.sh
 └── specs/
     └── {feature-name}/
         ├── requirements.md
@@ -107,10 +122,11 @@ Execute the spec in .kiro/specs/feature-name/
 
 | Skill | Used by | Purpose |
 |-------|---------|---------|
-| commit-message | builder | Generate conventional commit messages |
 | code-review | reviewer | Holistic code review against dev |
 | sync-specs | builder | Update specs to match implementation |
 | refine-ticket | team-lead | Refine Jira ticket structure |
+| address-pr-review | builder | Fetch PR review comments, implement fixes, validate, commit |
+| record-session | all | Log the agent session to the local SQLite database |
 
 ## Retry Protocol
 
