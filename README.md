@@ -128,6 +128,47 @@ Execute the spec in .kiro/specs/feature-name/
 | address-pr-review | builder | Fetch PR review comments, implement fixes, validate, commit |
 | record-session | all | Log the agent session to the local SQLite database |
 
+## Session Logging (Observability)
+
+Every run can be logged to a local SQLite database for traceability and metrics. This is the source of the usage numbers the framework reports (success rate, tickets, tool usage).
+
+**Database:** `~/.kiro/logs/agent-sessions.db` (lives outside the repo, not git-tracked)
+
+### How it's triggered
+
+Two ways, both run the same `record-session` flow:
+
+- **Automatic** — the `log-session` hook fires on the `agentStop` event at the end of a session, extracts the session data, and logs it. Trivial sessions (a plain question, no real work) are skipped.
+- **Manual** — invoke the `record-session` skill with a phrase like "record session", "log session", or "end session".
+
+### First-run vs. update
+
+The log script (`.kiro/scripts/log-session.sh`) is self-initializing. On the first call it detects the DB is missing and runs `init-session-db.sh` to create it and the schema; on every subsequent call it just inserts. Re-logging the same `session_id` upserts (`INSERT OR REPLACE`), so a session can be corrected without duplicating.
+
+### What gets logged
+
+Three tables:
+
+| Table | What it captures |
+|-------|------------------|
+| `sessions` | One row per session: `id`, `started_at`/`ended_at`, `agent_name`, `project`, `task_summary`, `jira_ticket`, `outcome` (`success`/`partial`/`failed`/`abandoned`), `issues_discovered` |
+| `tool_calls` | One row per tool call: `tool_name`, `arguments_summary`, `result_summary`, `exit_code`, `success`, `duration_ms`, `timestamp`. Covers MCP calls, git ops, file writes, lint/test runs, and subagent delegations |
+| `compliance_checks` | One row per workflow step: `step_name`, `passed`, plus optional `evidence` (commit SHAs, PR numbers) and `notes` on why a step ran or was skipped |
+
+Indexes on agent, project, and date make "what's covered / what failed / what ran" queries fast.
+
+### Honesty constraints
+
+The skill is explicit: do not fabricate tool calls, do not invent a `started_at` to manufacture a duration, and do not populate `evidence` with anything but real artifacts. Durations come from real tool-call timestamps or an explicit start time, falling back to a zero-width session when no timing data exists.
+
+### Example query
+
+```sql
+-- success rate and ticket count over all sessions
+SELECT outcome, COUNT(*) FROM sessions GROUP BY outcome;
+SELECT COUNT(DISTINCT jira_ticket) FROM sessions WHERE jira_ticket != '';
+```
+
 ## Retry Protocol
 
 | Stage | Strategy |
